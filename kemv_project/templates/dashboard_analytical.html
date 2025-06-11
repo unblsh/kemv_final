@@ -1,0 +1,446 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1 class="mb-4">Analytical Dashboard</h1>
+
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">Filters</div>
+            <div class="card-body">
+                <form id="analyticalFilterForm" class="row g-3 align-items-end">
+                    <div class="col-md-3">
+                        <label for="offenseCategoryFilter" class="form-label">Offense Category</label>
+                        <select class="form-select" id="offenseCategoryFilter">
+                            <!-- Options will be populated by JavaScript -->
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="precinctFilter" class="form-label">Precinct</label>
+                        <select class="form-select" id="precinctFilter">
+                            <!-- Options will be populated by JavaScript -->
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="neighborhoodFilter" class="form-label">Neighborhood</label>
+                        <select class="form-select" id="neighborhoodFilter">
+                            <!-- Options will be populated by JavaScript -->
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="startDateFilter" class="form-label">Start Date</label>
+                        <input type="date" class="form-control" id="startDateFilter">
+                    </div>
+                    <div class="col-md-3">
+                        <label for="endDateFilter" class="form-label">End Date</label>
+                        <input type="date" class="form-control" id="endDateFilter">
+                    </div>
+                    <div class="col-md-auto">
+                        <button type="submit" class="btn btn-primary">Apply Filters</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">Crimes Over Time (Filtered)</div>
+            <div class="card-body">
+                <canvas id="crimesOverTimeChart"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">Crime by Neighborhood (Filtered)</div>
+            <div class="card-body">
+                <canvas id="crimeByNeighborhoodChart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">Crime Locations (Scatter Plot)</div>
+            <div class="card-body">
+                <canvas id="scatterPlotChart"></canvas>
+            </div>
+        </div>
+    </div>
+     <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">Offense Frequency by Reporting Area</div>
+            <div class="card-body">
+                <canvas id="bubbleChart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">Crime Share by NIBRS Group AB (Filtered)</div>
+            <div class="card-body">
+                <canvas id="nibrsGroupFilteredChart"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">Filtered Crime Records</div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover">
+                        <thead>
+                            <tr>
+                                <th>Report Number</th>
+                                <th>Report DateTime</th>
+                                <th>Offense Category</th>
+                                <th>Precinct</th>
+                                <th>Neighborhood</th>
+                            </tr>
+                        </thead>
+                        <tbody id="filteredCrimesTableBody">
+                            <!-- Data will be inserted here by JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+                <nav aria-label="Page navigation">
+                    <ul class="pagination justify-content-center" id="paginationControls">
+                        <!-- Pagination will be inserted here by JavaScript -->
+                    </ul>
+                </nav>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const crimesOverTimeChartCtx = document.getElementById('crimesOverTimeChart').getContext('2d');
+    let crimesOverTimeChart;
+
+    const crimeByNeighborhoodChartCtx = document.getElementById('crimeByNeighborhoodChart').getContext('2d');
+    let crimeByNeighborhoodChart;
+
+    const scatterPlotChartCtx = document.getElementById('scatterPlotChart').getContext('2d');
+    let scatterPlotChart;
+
+    const bubbleChartCtx = document.getElementById('bubbleChart').getContext('2d');
+    let bubbleChart;
+
+    const nibrsGroupFilteredChartCtx = document.getElementById('nibrsGroupFilteredChart').getContext('2d');
+    let nibrsGroupFilteredChart;
+
+    function populateFilters(filters) {
+        const offenseCategoryFilter = document.getElementById('offenseCategoryFilter');
+        offenseCategoryFilter.innerHTML = '';
+        filters.offense_categories.forEach(category => {
+            const option = document.createElement('option');
+            option.value = category;
+            option.textContent = category;
+            offenseCategoryFilter.appendChild(option);
+        });
+
+        const precinctFilter = document.getElementById('precinctFilter');
+        precinctFilter.innerHTML = '';
+        filters.precincts.forEach(precinct => {
+            const option = document.createElement('option');
+            option.value = precinct;
+            option.textContent = precinct;
+            precinctFilter.appendChild(option);
+        });
+
+        const neighborhoodFilter = document.getElementById('neighborhoodFilter');
+        neighborhoodFilter.innerHTML = '';
+        filters.neighborhoods.forEach(neighborhood => {
+            const option = document.createElement('option');
+            option.value = neighborhood;
+            option.textContent = neighborhood;
+            neighborhoodFilter.appendChild(option);
+        });
+    }
+
+    function updateCharts(data) {
+        // Destroy existing charts if they exist
+        if (crimesOverTimeChart) crimesOverTimeChart.destroy();
+        if (crimeByNeighborhoodChart) crimeByNeighborhoodChart.destroy();
+        if (scatterPlotChart) scatterPlotChart.destroy();
+        if (bubbleChart) bubbleChart.destroy();
+        if (nibrsGroupFilteredChart) nibrsGroupFilteredChart.destroy();
+
+        // Line Chart: Crimes over time for selected offense category (filtered)
+        crimesOverTimeChart = new Chart(crimesOverTimeChartCtx, {
+            type: 'line',
+            data: {
+                labels: data.crimes_over_time_chart.labels,
+                datasets: [{
+                    label: 'Crime Count',
+                    data: data.crimes_over_time_chart.values,
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    fill: false
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+
+        // Grouped Bar Chart: Crime by neighborhood filtered by offense type
+        crimeByNeighborhoodChart = new Chart(crimeByNeighborhoodChartCtx, {
+            type: 'bar',
+            data: {
+                labels: data.crime_by_neighborhood_chart.labels,
+                datasets: [{
+                    label: 'Crime Count',
+                    data: data.crime_by_neighborhood_chart.values,
+                    backgroundColor: 'rgba(54, 162, 235, 0.6)'
+                }]
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                scales: {
+                    x: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+
+        // Scatter Plot: Latitude vs Longitude colored by offense category
+        scatterPlotChart = new Chart(scatterPlotChartCtx, {
+            type: 'scatter',
+            data: {
+                datasets: [{
+                    label: 'Crime Locations',
+                    data: data.scatter_plot_data.map(item => ({ x: item.longitude, y: item.latitude, offense: item.offense_category })),
+                    backgroundColor: data.scatter_plot_data.map(item => {
+                        // Assign colors based on offense_category for qualitative visualization
+                        // This is a simple example, a more robust solution would involve a color palette
+                        switch(item.offense_category) {
+                            case 'Theft': return 'rgba(255, 99, 132, 0.6)';
+                            case 'Assault': return 'rgba(54, 162, 235, 0.6)';
+                            case 'Burglary': return 'rgba(255, 206, 86, 0.6)';
+                            case 'Robbery': return 'rgba(75, 192, 192, 0.6)';
+                            case 'Homicide': return 'rgba(153, 102, 255, 0.6)';
+                            default: return 'rgba(201, 203, 207, 0.6)';
+                        }
+                    }),
+                    pointRadius: 5,
+                    pointHoverRadius: 7,
+                    parsing: {
+                        xAxisKey: 'x',
+                        yAxisKey: 'y'
+                    }
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    x: {
+                        type: 'linear',
+                        position: 'bottom',
+                        title: {
+                            display: true,
+                            text: 'Longitude'
+                        }
+                    },
+                    y: {
+                        type: 'linear',
+                        position: 'left',
+                        title: {
+                            display: true,
+                            text: 'Latitude'
+                        }
+                    }
+                },
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return `Offense: ${context.raw.offense}, Lat: ${context.raw.y}, Lng: ${context.raw.x}`;
+                            }
+                        }
+                    },
+                     legend: {
+                        display: false // Hide legend to avoid clutter for many categories
+                    }
+                }
+            }
+        });
+
+        // Bubble Chart: Offense frequency by reporting area size
+        bubbleChart = new Chart(bubbleChartCtx, {
+            type: 'bubble',
+            data: {
+                datasets: [{
+                    label: 'Offense Frequency by Reporting Area',
+                    data: data.bubble_chart_data.map(item => ({
+                        x: item.avg_longitude,
+                        y: item.avg_latitude,
+                        r: item.frequency / 50 // Adjust radius based on frequency
+                    })),
+                    backgroundColor: 'rgba(255, 99, 132, 0.6)'
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    x: {
+                        type: 'linear',
+                        position: 'bottom',
+                        title: {
+                            display: true,
+                            text: 'Average Longitude'
+                        }
+                    },
+                    y: {
+                        type: 'linear',
+                        position: 'left',
+                        title: {
+                            display: true,
+                            text: 'Average Latitude'
+                        }
+                    }
+                },
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return `Area: ${context.raw.reporting_area}, Frequency: ${context.raw.r * 50}`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        // Pie Chart: Crime share by NIBRS Group AB (A or B)
+        nibrsGroupFilteredChart = new Chart(nibrsGroupFilteredChartCtx, {
+            type: 'pie',
+            data: {
+                labels: data.nibrs_group_filtered_chart.labels,
+                datasets: [{
+                    data: data.nibrs_group_filtered_chart.values,
+                    backgroundColor: ['rgba(255, 99, 132, 0.6)', 'rgba(54, 162, 235, 0.6)', 'rgba(255, 206, 86, 0.6)']
+                }]
+            },
+            options: {
+                responsive: true,
+            }
+        });
+    }
+
+    function updateTable(paginatedCrimes) {
+        const filteredCrimesTableBody = document.getElementById('filteredCrimesTableBody');
+        filteredCrimesTableBody.innerHTML = '';
+        paginatedCrimes.items.forEach(crime => {
+            const row = filteredCrimesTableBody.insertRow();
+            row.insertCell().textContent = crime.Report_Number;
+            row.insertCell().textContent = crime.Report_DateTime;
+            row.insertCell().textContent = crime.Offense_Category;
+            row.insertCell().textContent = crime.Precinct;
+            row.insertCell().textContent = crime.Neighborhood;
+        });
+
+        const paginationControls = document.getElementById('paginationControls');
+        paginationControls.innerHTML = '';
+
+        // Previous button
+        const prevLi = document.createElement('li');
+        prevLi.className = `page-item ${paginatedCrimes.has_prev ? '' : 'disabled'}`;
+        const prevLink = document.createElement('a');
+        prevLink.className = 'page-link';
+        prevLink.href = '#';
+        prevLink.textContent = 'Previous';
+        prevLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            if (paginatedCrimes.has_prev) {
+                fetchAnalyticalData(paginatedCrimes.page - 1);
+            }
+        });
+        prevLi.appendChild(prevLink);
+        paginationControls.appendChild(prevLi);
+
+        // Page numbers
+        for (let i = 1; i <= paginatedCrimes.pages; i++) {
+            const pageLi = document.createElement('li');
+            pageLi.className = `page-item ${i === paginatedCrimes.page ? 'active' : ''}`;
+            const pageLink = document.createElement('a');
+            pageLink.className = 'page-link';
+            pageLink.href = '#';
+            pageLink.textContent = i;
+            pageLink.addEventListener('click', (e) => {
+                e.preventDefault();
+                fetchAnalyticalData(i);
+            });
+            pageLi.appendChild(pageLink);
+            paginationControls.appendChild(pageLi);
+        }
+
+        // Next button
+        const nextLi = document.createElement('li');
+        nextLi.className = `page-item ${paginatedCrimes.has_next ? '' : 'disabled'}`;
+        const nextLink = document.createElement('a');
+        nextLink.className = 'page-link';
+        nextLink.href = '#';
+        nextLink.textContent = 'Next';
+        nextLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            if (paginatedCrimes.has_next) {
+                fetchAnalyticalData(paginatedCrimes.page + 1);
+            }
+        });
+        nextLi.appendChild(nextLink);
+        paginationControls.appendChild(nextLi);
+    }
+
+    function fetchAnalyticalData(page = 1) {
+        const offenseCategory = document.getElementById('offenseCategoryFilter').value;
+        const precinct = document.getElementById('precinctFilter').value;
+        const neighborhood = document.getElementById('neighborhoodFilter').value;
+        const startDate = document.getElementById('startDateFilter').value;
+        const endDate = document.getElementById('endDateFilter').value;
+
+        const params = new URLSearchParams({
+            page: page,
+            offense_category: offenseCategory,
+            precinct: precinct,
+            neighborhood: neighborhood,
+            start_date: startDate,
+            end_date: endDate
+        });
+
+        fetch(`/api/analytical-data?${params.toString()}`)
+            .then(response => response.json())
+            .then(data => {
+                populateFilters(data.filters);
+                updateCharts(data);
+                updateTable(data.paginated_crimes);
+            })
+            .catch(error => console.error('Error fetching analytical data:', error));
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        fetchAnalyticalData();
+
+        document.getElementById('analyticalFilterForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            fetchAnalyticalData();
+        });
+    });
+</script>
+{% endblock %} 
