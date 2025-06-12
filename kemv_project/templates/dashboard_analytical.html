@@ -166,6 +166,17 @@
             option.textContent = neighborhood;
             neighborhoodFilter.appendChild(option);
         });
+
+        // Set default date range filters
+        const startDateFilter = document.getElementById('startDateFilter');
+        const endDateFilter = document.getElementById('endDateFilter');
+
+        if (filters.min_offense_date) {
+            startDateFilter.value = filters.min_offense_date;
+        }
+        if (filters.max_offense_date) {
+            endDateFilter.value = filters.max_offense_date;
+        }
     }
 
     function updateCharts(data) {
@@ -427,6 +438,7 @@
         fetch(`/api/analytical-data?${params.toString()}`)
             .then(response => response.json())
             .then(data => {
+                console.log('Analytical Data:', data);
                 populateFilters(data.filters);
                 updateCharts(data);
                 updateTable(data.paginated_crimes);

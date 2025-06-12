@@ -104,6 +104,7 @@
         fetch('/api/operational-data')
             .then(response => response.json())
             .then(data => {
+                console.log('Operational Data:', data);
                 // KPI Cards
                 document.getElementById('kpiTotalCrimes').textContent = data.kpis.total_crimes_today;
                 document.getElementById('kpiActiveSectors').textContent = data.kpis.active_sectors;

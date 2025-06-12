@@ -25,14 +25,6 @@
 <div class="row mb-4">
     <div class="col-md-6">
         <div class="card">
-            <div class="card-header">Share of Group A vs B Offenses</div>
-            <div class="card-body">
-                <canvas id="nibrsGroupChart"></canvas>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-6">
-        <div class="card">
             <div class="card-header">Crime Count Per Precinct</div>
             <div class="card-body">
                 <canvas id="precinctCrimeChart"></canvas>
@@ -44,7 +36,9 @@
 <div class="row mb-4">
     <div class="col-md-6">
         <div class="card">
-            <div class="card-header">Top 5 Neighborhoods with Highest Crime</div>
+            <div class="card-header">
+                Top 5 Neighborhoods with Highest Crime
+            </div>
             <div class="card-body">
                 <table class="table table-striped">
                     <thead>
@@ -62,7 +56,13 @@
     </div>
      <div class="col-md-6">
         <div class="card">
-            <div class="card-header">Crime Distribution by Neighborhood (Qualitative)</div>
+            <div class="card-header">
+                Crime Distribution by Neighborhood (Qualitative)
+                <div class="form-check form-switch float-end">
+                    <input class="form-check-input" type="checkbox" id="sortNeighborhoodsToggle">
+                    <label class="form-check-label" for="sortNeighborhoodsToggle">Sort Descending</label>
+                </div>
+            </div>
             <div class="card-body">
                 <canvas id="neighborhoodCrimeDistributionChart"></canvas>
                 <small class="text-muted">This chart displays the crime count for all neighborhoods, providing a qualitative overview.</small>
@@ -75,35 +75,54 @@
 
 {% block scripts %}
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
+    let offenseCategoryGroupChart;
+    let monthlyCrimeChart;
+    let precinctCrimeChart;
+    let neighborhoodCrimeChart;
+    let currentNeighborhoodSortOrder = 'desc'; // Initial sort order
+
+    const fetchDataAndRenderCharts = () => {
         fetch('/api/strategic-data')
             .then(response => response.json())
             .then(data => {
-                // Bar Chart: Crime count by NIBRS Offense Category
-                const offenseCategoryCtx = document.getElementById('offenseCategoryChart').getContext('2d');
-                new Chart(offenseCategoryCtx, {
+                console.log('Strategic Data:', data);
+                // Bar Chart: Crime count by NIBRS Offense Category with Group A/B breakdown
+                if (offenseCategoryGroupChart) offenseCategoryGroupChart.destroy();
+                const offenseCategoryGroupCtx = document.getElementById('offenseCategoryChart').getContext('2d');
+                offenseCategoryGroupChart = new Chart(offenseCategoryGroupCtx, {
                     type: 'bar',
                     data: {
-                        labels: data.offense_category_chart.labels,
-                        datasets: [{
-                            label: 'Crime Count',
-                            data: data.offense_category_chart.values,
-                            backgroundColor: 'rgba(54, 162, 235, 0.6)'
-                        }]
+                        labels: data.offense_category_group_chart.labels,
+                        datasets: data.offense_category_group_chart.datasets.map(dataset => ({
+                            label: dataset.label,
+                            data: dataset.data,
+                            backgroundColor: dataset.label === 'Group A' ? 'rgba(54, 162, 235, 0.6)' : 'rgba(255, 99, 132, 0.6)' // Example colors
+                        }))
                     },
                     options: {
                         responsive: true,
                         scales: {
+                            x: {
+                                stacked: true
+                            },
                             y: {
-                                beginAtZero: true
+                                beginAtZero: true,
+                                stacked: true
+                            }
+                        },
+                        plugins: {
+                            tooltip: {
+                                mode: 'index',
+                                intersect: false
                             }
                         }
                     }
                 });
 
-                // Line Chart: Total crime count per month over past 12 months
+                // Line Chart: Total crime count per month over past 12 months with Trendline
+                if (monthlyCrimeChart) monthlyCrimeChart.destroy();
                 const monthlyCrimeCtx = document.getElementById('monthlyCrimeChart').getContext('2d');
-                new Chart(monthlyCrimeCtx, {
+                monthlyCrimeChart = new Chart(monthlyCrimeCtx, {
                     type: 'line',
                     data: {
                         labels: data.monthly_crime_chart.labels,
@@ -111,7 +130,16 @@
                             label: 'Total Crime Count',
                             data: data.monthly_crime_chart.values,
                             borderColor: 'rgba(75, 192, 192, 1)',
-                            fill: false
+                            fill: false,
+                            tension: 0.1
+                        }, {
+                            label: 'Trendline',
+                            data: data.monthly_crime_chart.trendline,
+                            borderColor: 'rgba(255, 99, 132, 1)',
+                            borderDash: [5, 5],
+                            fill: false,
+                            pointRadius: 0,
+                            tension: 0.1
                         }]
                     },
                     options: {
@@ -120,29 +148,20 @@
                             y: {
                                 beginAtZero: true
                             }
+                        },
+                        plugins: {
+                            tooltip: {
+                                mode: 'index',
+                                intersect: false
+                            }
                         }
                     }
                 });
 
-                // Pie Chart: Share of Group A vs B offenses
-                const nibrsGroupCtx = document.getElementById('nibrsGroupChart').getContext('2d');
-                new Chart(nibrsGroupCtx, {
-                    type: 'pie',
-                    data: {
-                        labels: data.nibrs_group_chart.labels,
-                        datasets: [{
-                            data: data.nibrs_group_chart.values,
-                            backgroundColor: ['rgba(255, 99, 132, 0.6)', 'rgba(54, 162, 235, 0.6)', 'rgba(255, 206, 86, 0.6)']
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                    }
-                });
-
                 // Vertical Bar: Crime count per precinct
+                if (precinctCrimeChart) precinctCrimeChart.destroy();
                 const precinctCrimeCtx = document.getElementById('precinctCrimeChart').getContext('2d');
-                new Chart(precinctCrimeCtx, {
+                precinctCrimeChart = new Chart(precinctCrimeCtx, {
                     type: 'bar',
                     data: {
                         labels: data.precinct_crime_chart.labels,
@@ -159,12 +178,19 @@
                             x: {
                                 beginAtZero: true
                             }
+                        },
+                        plugins: {
+                            tooltip: {
+                                mode: 'index',
+                                intersect: false
+                            }
                         }
                     }
                 });
 
                 // Table: Top 5 neighborhoods with highest crime
                 const topNeighborhoodsTableBody = document.getElementById('topNeighborhoodsTableBody');
+                topNeighborhoodsTableBody.innerHTML = ''; // Clear previous data
                 data.top_neighborhoods.forEach(item => {
                     const row = topNeighborhoodsTableBody.insertRow();
                     const neighborhoodCell = row.insertCell();
@@ -173,39 +199,69 @@
                     crimeCountCell.textContent = item.crime_count;
                 });
 
-                // Donut Chart: Distribution of offense categories (Same as offenseCategoryChart, just different type)
-                const neighborhoodCrimeDistributionCtx = document.getElementById('neighborhoodCrimeDistributionChart').getContext('2d');
-                const sortedNeighborhoods = data.all_neighborhood_crime_data.sort((a, b) => b.crime_count - a.crime_count);
-                const neighborhoodLabels = sortedNeighborhoods.map(item => item.neighborhood);
-                const neighborhoodValues = sortedNeighborhoods.map(item => item.crime_count);
+                // Bar Chart: Crime Distribution by Neighborhood (Qualitative) with sorting
+                const renderNeighborhoodChart = (sortOrder) => {
+                    if (neighborhoodCrimeChart) neighborhoodCrimeChart.destroy();
 
-                new Chart(neighborhoodCrimeDistributionCtx, {
-                    type: 'bar',
-                    data: {
-                        labels: neighborhoodLabels,
-                        datasets: [{
-                            label: 'Crime Count',
-                            data: neighborhoodValues,
-                            backgroundColor: 'rgba(255, 159, 64, 0.6)'
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        scales: {
-                            y: {
-                                beginAtZero: true
-                            }
+                    let sortedNeighborhoods = [...data.all_neighborhood_crime_data];
+                    if (sortOrder === 'desc') {
+                        sortedNeighborhoods.sort((a, b) => b.crime_count - a.crime_count);
+                    } else {
+                        sortedNeighborhoods.sort((a, b) => a.crime_count - b.crime_count);
+                    }
+                    
+                    const neighborhoodLabels = sortedNeighborhoods.map(item => item.neighborhood);
+                    const neighborhoodValues = sortedNeighborhoods.map(item => item.crime_count);
+
+                    const neighborhoodCrimeDistributionCtx = document.getElementById('neighborhoodCrimeDistributionChart').getContext('2d');
+                    neighborhoodCrimeChart = new Chart(neighborhoodCrimeDistributionCtx, {
+                        type: 'bar',
+                        data: {
+                            labels: neighborhoodLabels,
+                            datasets: [{
+                                label: 'Crime Count',
+                                data: neighborhoodValues,
+                                backgroundColor: 'rgba(255, 159, 64, 0.6)'
+                            }]
                         },
-                        indexAxis: 'y',
-                        plugins: {
-                            legend: {
-                                display: false
+                        options: {
+                            responsive: true,
+                            scales: {
+                                y: {
+                                    beginAtZero: true
+                                }
+                            },
+                            indexAxis: 'y',
+                            plugins: {
+                                legend: {
+                                    display: false
+                                },
+                                tooltip: {
+                                    mode: 'index',
+                                    intersect: false
+                                }
                             }
                         }
-                    }
-                });
+                    });
+                };
+
+                // Initial render
+                renderNeighborhoodChart(currentNeighborhoodSortOrder);
+
+                // Add event listener for sort toggle
+                const sortNeighborhoodsToggle = document.getElementById('sortNeighborhoodsToggle');
+                if (sortNeighborhoodsToggle) {
+                    sortNeighborhoodsToggle.checked = (currentNeighborhoodSortOrder === 'desc');
+                    sortNeighborhoodsToggle.onchange = (event) => {
+                        currentNeighborhoodSortOrder = event.target.checked ? 'desc' : 'asc';
+                        renderNeighborhoodChart(currentNeighborhoodSortOrder);
+                    };
+                }
+
             })
             .catch(error => console.error('Error fetching strategic data:', error));
-    });
+    };
+
+    window.onload = fetchDataAndRenderCharts; // Call the function on load
 </script>
 {% endblock %} 
