@@ -118,8 +118,6 @@ kemv_final/
     └── dashboard_analytical.html # Analytical dashboard layout
 ```
 
-## Contributing
-(If applicable, add guidelines for contributions here)
+## Author
+Azim A.
 
-## License
-(Specify your project's license here, e.g., MIT, Apache 2.0, etc.) 
