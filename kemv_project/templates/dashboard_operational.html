@@ -8,24 +8,49 @@
         <div class="card">
             <div class="card-header">KPIs</div>
             <div class="card-body">
-                <div class="row text-center">
-                    <div class="col-md-4">
-                        <div class="p-3 border rounded">
+                <div class="row text-center d-flex align-items-stretch">
+                    <div class="col-md-3">
+                        <div class="p-3 border rounded h-100">
                             <h5>Today's Total Crimes</h5>
                             <h3 id="kpiTotalCrimes">...</h3>
+                            <div class="small text-muted">
+                                <span id="kpiTotalCrimesDailyChange"></span>
+                                <br>
+                                <span id="kpiTotalCrimesWeeklyChange"></span>
+                            </div>
                         </div>
                     </div>
-                    <div class="col-md-4">
-                        <div class="p-3 border rounded">
+                    <div class="col-md-3">
+                        <div class="p-3 border rounded h-100">
                             <h5>Active Sectors (Today)</h5>
                             <h3 id="kpiActiveSectors">...</h3>
+                            <div class="small text-muted">
+                                <span id="kpiActiveSectorsChange"></span>
+                            </div>
                         </div>
                     </div>
-                    <div class="col-md-4">
-                        <div class="p-3 border rounded">
+                    <div class="col-md-3">
+                        <div class="p-3 border rounded h-100">
                             <h5>Most Reported Offense (Today)</h5>
                             <h3 id="kpiMostReportedOffense">...</h3>
                         </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="p-3 border rounded h-100">
+                            <h5>Last Crime Committed</h5>
+                            <h6 id="kpiLastCrimeOffense">N/A</h6>
+                            <div class="small text-muted">
+                                <span id="kpiLastCrimeDateTime">N/A</span>
+                                <br>
+                                <span id="kpiLastCrimeLocation">N/A</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="row mt-3">
+                    <div class="col-md-4 offset-md-4 text-center">
+                        <label for="operationalDatePicker" class="form-label">Select Date for KPIs</label>
+                        <input type="text" class="form-control text-center" id="operationalDatePicker" placeholder="Select a date">
                     </div>
                 </div>
             </div>
@@ -36,17 +61,29 @@
 <div class="row mb-4">
     <div class="col-md-6">
         <div class="card">
-            <div class="card-header">Crime Count by Hour of Day</div>
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span>Crime Count by Hour of Day</span>
+                <div class="btn-group" role="group">
+                    <button type="button" class="btn btn-sm btn-outline-light active" data-view="all">All</button>
+                    <button type="button" class="btn btn-sm btn-outline-light" data-view="weekday">Weekday</button>
+                    <button type="button" class="btn btn-sm btn-outline-light" data-view="weekend">Weekend</button>
+                </div>
+            </div>
             <div class="card-body">
-                <canvas id="crimeByHourChart"></canvas>
+                <canvas id="crimeByHourChart" style="height: 300px;"></canvas>
             </div>
         </div>
     </div>
     <div class="col-md-6">
         <div class="card">
-            <div class="card-header">Crime by Category: Today vs Yesterday</div>
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span>Crime by Category: Today vs Yesterday</span>
+                <div class="btn-group" role="group" id="categoryToggleGroup">
+                    <!-- Category toggle buttons will be populated by JavaScript -->
+                </div>
+            </div>
             <div class="card-body">
-                <canvas id="crimeTodayYesterdayChart"></canvas>
+                <canvas id="crimeTodayYesterdayChart" style="height: 300px;"></canvas>
             </div>
         </div>
     </div>
@@ -74,23 +111,89 @@
 <div class="row mb-4">
     <div class="col-md-12">
         <div class="card">
-            <div class="card-header">Last 50 Reported Crimes</div>
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span>Recent Crimes</span>
+                <div class="input-group" style="width: 300px;">
+                    <input type="text" class="form-control form-control-sm" id="recentCrimesSearch" placeholder="Search crimes...">
+                    <button class="btn btn-outline-secondary btn-sm" type="button" id="clearSearch">
+                        <i class="bi bi-x-lg"></i>
+                    </button>
+                </div>
+            </div>
             <div class="card-body">
                 <div class="table-responsive">
                     <table class="table table-striped table-hover">
                         <thead>
                             <tr>
-                                <th>Report Number</th>
-                                <th>Report DateTime</th>
-                                <th>Offense Category</th>
+                                <th>Report #</th>
+                                <th>Date/Time</th>
+                                <th>Category</th>
                                 <th>Precinct</th>
                                 <th>Neighborhood</th>
+                                <th>Actions</th>
                             </tr>
                         </thead>
-                        <tbody id="recentCrimesTableBody">
-                            <!-- Data will be inserted here by JavaScript -->
-                        </tbody>
+                        <tbody id="recentCrimesTableBody"></tbody>
                     </table>
+                </div>
+                <div class="d-flex justify-content-between align-items-center mt-3">
+                    <div>
+                        Showing <span id="tableInfo">0-0 of 0</span> entries
+                    </div>
+                    <nav>
+                        <ul class="pagination pagination-sm mb-0" id="recentCrimesPagination"></ul>
+                    </nav>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Crime Details Modal -->
+<div class="modal fade" id="crimeDetailsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Crime Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <dl class="row">
+                            <dt class="col-sm-4">Report Number</dt>
+                            <dd class="col-sm-8" id="modalReportNumber"></dd>
+                            
+                            <dt class="col-sm-4">Date/Time</dt>
+                            <dd class="col-sm-8" id="modalDateTime"></dd>
+                            
+                            <dt class="col-sm-4">Category</dt>
+                            <dd class="col-sm-8" id="modalCategory"></dd>
+                            
+                            <dt class="col-sm-4">NIBRS Group</dt>
+                            <dd class="col-sm-8" id="modalNIBRSGroup"></dd>
+                        </dl>
+                    </div>
+                    <div class="col-md-6">
+                        <dl class="row">
+                            <dt class="col-sm-4">Precinct</dt>
+                            <dd class="col-sm-8" id="modalPrecinct"></dd>
+                            
+                            <dt class="col-sm-4">Neighborhood</dt>
+                            <dd class="col-sm-8" id="modalNeighborhood"></dd>
+                            
+                            <dt class="col-sm-4">Location</dt>
+                            <dd class="col-sm-8" id="modalLocation"></dd>
+                            
+                            <dt class="col-sm-4">Description</dt>
+                            <dd class="col-sm-8" id="modalDescription"></dd>
+                        </dl>
+                    </div>
+                </div>
+                <div class="row mt-3">
+                    <div class="col-12">
+                        <div id="modalMap" style="height: 300px;"></div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -100,137 +203,675 @@
 
 {% block scripts %}
 <script>
+    let crimeByHourChart;
+    let crimeTodayYesterdayChart;
+    let crimeBySectorChart;
+    let dailyCrimeChart;
+    let currentViewType = 'all';
+    let recentCrimesData = [];
+    let currentPage = 1;
+    const itemsPerPage = 10;
+    let crimeDetailsModal;
+    let modalMap;
+    let selectedOperationalDate = ''; // To store the selected date
+    let availableDates = []; // To store dates from backend
+    let currentSelectedCategories = ['all']; // New global state for category selection
+
+    const formatPercentageChange = (change) => {
+        const sign = change > 0 ? '+' : '';
+        const color = change > 0 ? 'text-danger' : change < 0 ? 'text-success' : 'text-muted';
+        return `<span class="${color}">${sign}${change}%</span>`;
+    };
+
+    const updateKPIs = (data) => {
+        // Update KPI values
+        document.getElementById('kpiTotalCrimes').textContent = data.kpis.total_crimes_today.value;
+        document.getElementById('kpiActiveSectors').textContent = data.kpis.active_sectors.value;
+        document.getElementById('kpiMostReportedOffense').textContent = data.kpis.most_reported_offense_today || 'N/A';
+        
+        // Update Last Crime Committed KPI
+        console.log("Frontend: data.last_crime_committed", data.last_crime_committed); // Debug log for correct path
+        if (data.last_crime_committed) {
+            document.getElementById('kpiLastCrimeOffense').textContent = data.last_crime_committed.Offense_Description || 'N/A';
+            document.getElementById('kpiLastCrimeDateTime').textContent = data.last_crime_committed.Report_DateTime || 'N/A';
+            document.getElementById('kpiLastCrimeLocation').textContent = data.last_crime_committed.Location || 'N/A';
+        } else {
+            document.getElementById('kpiLastCrimeOffense').textContent = 'N/A';
+            document.getElementById('kpiLastCrimeDateTime').textContent = 'N/A';
+            document.getElementById('kpiLastCrimeLocation').textContent = 'N/A';
+        }
+
+        // Update percentage changes
+        document.getElementById('kpiTotalCrimesDailyChange').innerHTML = 
+            `vs Yesterday: ${formatPercentageChange(data.kpis.total_crimes_today.daily_change)}`;
+        document.getElementById('kpiTotalCrimesWeeklyChange').innerHTML = 
+            `vs Last Week: ${formatPercentageChange(data.kpis.total_crimes_today.weekly_change)}`;
+        document.getElementById('kpiActiveSectorsChange').innerHTML = 
+            `vs Yesterday: ${formatPercentageChange(data.kpis.active_sectors.change)}`;
+    };
+
+    const updateHourChart = (data, viewType) => {
+        if (crimeByHourChart) crimeByHourChart.destroy();
+        const crimeByHourCtx = document.getElementById('crimeByHourChart').getContext('2d');
+        
+        crimeByHourChart = new Chart(crimeByHourCtx, {
+            type: 'line',
+            data: {
+                labels: data.crime_by_hour_chart.labels,
+                datasets: [{
+                    label: 'Crime Count',
+                    data: data.crime_by_hour_chart.values[viewType],
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    fill: true,
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                interaction: {
+                    mode: 'index',
+                    intersect: false
+                },
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const value = context.parsed.y;
+                                const total = data.crime_by_hour_chart.values[viewType].reduce((a, b) => a + b, 0);
+                                const percentage = ((value / total) * 100).toFixed(1);
+                                return `Crime Count: ${value} (${percentage}%)`;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Number of Crimes'
+                        }
+                    },
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Hour of Day'
+                        }
+                    }
+                }
+            }
+        });
+    };
+
+    const updateTopOffensesSelect = (availableOffenses) => {
+        console.log('updateTopOffensesSelect called. currentSelectedCategories:', currentSelectedCategories);
+        const toggleGroup = document.getElementById('categoryToggleGroup');
+        toggleGroup.innerHTML = ''; // Clear existing buttons
+        
+        // Create "All" toggle button
+        const allButton = document.createElement('button');
+        allButton.type = 'button';
+        allButton.className = 'btn btn-sm btn-outline-light';
+        allButton.textContent = 'All';
+        allButton.dataset.category = 'all';
+        toggleGroup.appendChild(allButton);
+        
+        // Create toggle buttons for each offense category
+        availableOffenses.forEach(offense => {
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.className = 'btn btn-sm btn-outline-light';
+            button.textContent = offense;
+            button.dataset.category = offense;
+            toggleGroup.appendChild(button);
+        });
+
+        // Get all newly created buttons
+        const allToggleButtons = toggleGroup.querySelectorAll('button');
+
+        // Explicitly deactivate all buttons initially
+        allToggleButtons.forEach(btn => {
+            btn.classList.remove('active');
+            console.log(`Deactivated: ${btn.dataset.category}, active status: ${btn.classList.contains('active')}`);
+        });
+
+        // Apply active classes based on currentSelectedCategories
+        if (currentSelectedCategories.includes('all')) {
+            // If 'all' is selected, activate only the 'All' button
+            allButton.classList.add('active');
+            console.log(`Activated 'All', active status: ${allButton.classList.contains('active')}`);
+        } else {
+            // If specific categories are selected, activate them
+            currentSelectedCategories.forEach(selectedCat => {
+                const buttonToActivate = toggleGroup.querySelector(`[data-category="${selectedCat}"]`);
+                if (buttonToActivate) {
+                    buttonToActivate.classList.add('active');
+                    console.log(`Activated: ${selectedCat}, active status: ${buttonToActivate.classList.contains('active')}`);
+                }
+            });
+        }
+        
+        // Add click event listeners
+        allToggleButtons.forEach(button => { // Attach listeners to newly created buttons
+            button.addEventListener('click', (e) => {
+                const clickedCategory = e.target.dataset.category;
+                const isAllButton = clickedCategory === 'all';
+                
+                console.log(`Clicked: ${clickedCategory}, isAllButton: ${isAllButton}`);
+                console.log('currentSelectedCategories before update:', currentSelectedCategories);
+
+                if (isAllButton) {
+                    currentSelectedCategories = ['all'];
+                } else {
+                    if (currentSelectedCategories.includes(clickedCategory)) {
+                        currentSelectedCategories = currentSelectedCategories.filter(cat => cat !== clickedCategory);
+                    } else {
+                        currentSelectedCategories = currentSelectedCategories.filter(cat => cat !== 'all');
+                        currentSelectedCategories.push(clickedCategory);
+                    }
+                    if (currentSelectedCategories.length === 0) {
+                        currentSelectedCategories = ['all'];
+                    }
+                }
+                
+                console.log('currentSelectedCategories after update:', currentSelectedCategories);
+                
+                // Re-render buttons based on new currentSelectedCategories
+                updateTopOffensesSelect(availableOffenses); 
+                
+                // Fetch new data based on updated selection
+                fetchOperationalData(currentViewType);
+            });
+        });
+    };
+
+    const updateTodayYesterdayChart = (data) => {
+        if (crimeTodayYesterdayChart) crimeTodayYesterdayChart.destroy();
+        const crimeTodayYesterdayCtx = document.getElementById('crimeTodayYesterdayChart').getContext('2d');
+        
+        crimeTodayYesterdayChart = new Chart(crimeTodayYesterdayCtx, {
+            type: 'bar',
+            data: {
+                labels: data.crime_today_yesterday_chart.labels,
+                datasets: [
+                    {
+                        label: 'Today',
+                        data: data.crime_today_yesterday_chart.today_values,
+                        backgroundColor: 'rgba(255, 99, 132, 0.6)',
+                        borderColor: 'rgba(255, 99, 132, 1)',
+                        borderWidth: 1
+                    },
+                    {
+                        label: 'Yesterday',
+                        data: data.crime_today_yesterday_chart.yesterday_values,
+                        backgroundColor: 'rgba(54, 162, 235, 0.6)',
+                        borderColor: 'rgba(54, 162, 235, 1)',
+                        borderWidth: 1
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                interaction: {
+                    mode: 'index',
+                    intersect: false
+                },
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const datasetLabel = context.dataset.label;
+                                const value = context.parsed.y;
+                                const offense = data.crime_today_yesterday_chart.labels[context.dataIndex];
+                                const percentChange = data.crime_today_yesterday_chart.percent_changes[context.dataIndex];
+                                const changeText = datasetLabel === 'Today' ? 
+                                    ` (${percentChange > 0 ? '+' : ''}${percentChange}% vs yesterday)` : '';
+                                return `${datasetLabel}: ${value}${changeText}`;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Number of Crimes'
+                        }
+                    }
+                }
+            }
+        });
+    };
+
+    const updateSectorChart = (data) => {
+        if (crimeBySectorChart) crimeBySectorChart.destroy();
+        const crimeBySectorCtx = document.getElementById('crimeBySectorChart').getContext('2d');
+        
+        crimeBySectorChart = new Chart(crimeBySectorCtx, {
+            type: 'bar',
+            data: {
+                labels: data.crime_by_sector_chart.labels,
+                datasets: [{
+                    label: 'Crime Count',
+                    data: data.crime_by_sector_chart.values,
+                    backgroundColor: 'rgba(153, 102, 255, 0.6)',
+                    borderColor: 'rgba(153, 102, 255, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                indexAxis: 'y',
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const value = context.parsed.x;
+                                const total = data.crime_by_sector_chart.values.reduce((a, b) => a + b, 0);
+                                const percentage = ((value / total) * 100).toFixed(1);
+                                return `Crime Count: ${value} (${percentage}%)`;
+                            }
+                        }
+                    },
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    x: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Number of Crimes'
+                        }
+                    },
+                    y: {
+                        title: {
+                            display: true,
+                            text: 'Sector'
+                        }
+                    }
+                }
+            }
+        });
+    };
+
+    const updateDailyCrimeChart = (data) => {
+        if (dailyCrimeChart) dailyCrimeChart.destroy();
+        const dailyCrimeCtx = document.getElementById('dailyCrimeChart').getContext('2d');
+        
+        dailyCrimeChart = new Chart(dailyCrimeCtx, {
+            type: 'line',
+            data: {
+                labels: data.daily_crime_chart.labels,
+                datasets: [{
+                    label: 'Daily Crime Count',
+                    data: data.daily_crime_chart.values,
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    fill: true,
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                interaction: {
+                    mode: 'index',
+                    intersect: false
+                },
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const value = context.parsed.y;
+                                const total = data.daily_crime_chart.values.reduce((a, b) => a + b, 0);
+                                const percentage = ((value / total) * 100).toFixed(1);
+                                return `Crime Count: ${value} (${percentage}%)`;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Number of Crimes'
+                        }
+                    },
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Date'
+                        }
+                    }
+                }
+            }
+        });
+    };
+
+    const updateRecentCrimesTable = (data, page = 1, searchTerm = '') => {
+        const tableBody = document.getElementById('recentCrimesTableBody');
+        tableBody.innerHTML = '';
+
+        // Filter data based on search term and exclude rows with '-' values
+        const filteredData = data.filter(crime => {
+            const searchLower = searchTerm.toLowerCase();
+            const matchesSearch = Object.values(crime).some(value => 
+                value && value.toString().toLowerCase().includes(searchLower)
+            );
+            const hasNoHyphen = !Object.values(crime).some(value => value === '-' || (typeof value === 'string' && value.trim() === '-'));
+            return matchesSearch && hasNoHyphen;
+        });
+
+        // Calculate pagination
+        const totalItems = filteredData.length;
+        const totalPages = Math.ceil(totalItems / itemsPerPage);
+        const startIndex = (page - 1) * itemsPerPage;
+        const endIndex = Math.min(startIndex + itemsPerPage, totalItems);
+        const pageData = filteredData.slice(startIndex, endIndex);
+
+        // Update table info
+        document.getElementById('tableInfo').textContent = 
+            `${totalItems ? startIndex + 1 : 0}-${endIndex} of ${totalItems}`;
+
+        // Update pagination
+        const pagination = document.getElementById('recentCrimesPagination');
+        pagination.innerHTML = '';
+
+        // Previous button
+        const prevLi = document.createElement('li');
+        prevLi.className = `page-item ${page === 1 ? 'disabled' : ''}`;
+        prevLi.innerHTML = `<a class="page-link" href="#" data-page="${page - 1}">Previous</a>`;
+        pagination.appendChild(prevLi);
+
+        // Page numbers
+        for (let i = 1; i <= totalPages; i++) {
+            const li = document.createElement('li');
+            li.className = `page-item ${i === page ? 'active' : ''}`;
+            li.innerHTML = `<a class="page-link" href="#" data-page="${i}">${i}</a>`;
+            pagination.appendChild(li);
+        }
+
+        // Next button
+        const nextLi = document.createElement('li');
+        nextLi.className = `page-item ${page === totalPages ? 'disabled' : ''}`;
+        nextLi.innerHTML = `<a class="page-link" href="#" data-page="${page + 1}">Next</a>`;
+        pagination.appendChild(nextLi);
+
+        // Add event listeners to pagination
+        pagination.querySelectorAll('.page-link').forEach(link => {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                const newPage = parseInt(e.target.dataset.page);
+                if (newPage && newPage !== page) {
+                    updateRecentCrimesTable(data, newPage, searchTerm);
+                }
+            });
+        });
+
+        // Populate table
+        pageData.forEach(crime => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${crime.Report_Number}</td>
+                <td>${crime.Report_DateTime}</td>
+                <td>${crime.Offense_Category}</td>
+                <td>${crime.Precinct}</td>
+                <td>${crime.Neighborhood}</td>
+                <td>
+                    <button class="btn btn-sm btn-outline-primary view-details" 
+                            data-crime-id="${crime.Report_Number}">
+                        <i class="bi bi-info-circle"></i> Details
+                    </button>
+                </td>
+            `;
+            tableBody.appendChild(row);
+        });
+
+        // Add event listeners to detail buttons
+        tableBody.querySelectorAll('.view-details').forEach(button => {
+            button.addEventListener('click', () => {
+                const crimeId = button.dataset.crimeId;
+                const crime = data.find(c => c.Report_Number === crimeId);
+                if (crime) {
+                    showCrimeDetails(crime);
+                }
+            });
+        });
+    };
+
+    const showCrimeDetails = (crime) => {
+        // Populate modal fields
+        document.getElementById('modalReportNumber').textContent = crime.Report_Number;
+        document.getElementById('modalDateTime').textContent = crime.Report_DateTime;
+        document.getElementById('modalCategory').textContent = crime.Offense_Category;
+        document.getElementById('modalNIBRSGroup').textContent = crime.NIBRS_Group_AB;
+        document.getElementById('modalPrecinct').textContent = crime.Precinct;
+        document.getElementById('modalNeighborhood').textContent = crime.Neighborhood;
+        document.getElementById('modalLocation').textContent = crime.Location;
+        document.getElementById('modalDescription').textContent = crime.Offense_Description;
+
+        // Show modal
+        crimeDetailsModal.show();
+
+        // Initialize or update map
+        if (crime.Latitude && crime.Longitude) {
+            if (!modalMap) {
+                modalMap = L.map('modalMap').setView([crime.Latitude, crime.Longitude], 15);
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '© OpenStreetMap contributors'
+                }).addTo(modalMap);
+            } else {
+                modalMap.setView([crime.Latitude, crime.Longitude], 15);
+            }
+
+            // Clear existing markers
+            modalMap.eachLayer((layer) => {
+                if (layer instanceof L.Marker) {
+                    modalMap.removeLayer(layer);
+                }
+            });
+
+            // Add marker
+            L.marker([crime.Latitude, crime.Longitude])
+                .bindPopup(`<b>${crime.Offense_Category}</b><br>${crime.Location}`)
+                .addTo(modalMap);
+        }
+    };
+
+    const fetchOperationalData = async (viewType = 'all') => {
+        try {
+            const params = new URLSearchParams({
+                view_type: viewType,
+            });
+
+            // Use currentSelectedCategories directly for the API call
+            currentSelectedCategories.forEach(offense => {
+                // Only append if it's a specific category, not 'all'
+                if (offense !== 'all') {
+                    params.append('top_offenses', offense);
+                }
+            });
+
+            // Add selected_date to params if available
+            if (selectedOperationalDate) {
+                params.append('selected_date', selectedOperationalDate);
+            }
+
+            const response = await fetch(`/api/operational-data?${params.toString()}`);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const data = await response.json();
+            console.log('Operational Data:', data);
+
+            // Populate available dates for date picker
+            availableDates = data.available_dates;
+
+            // Set date picker to the latest available date initially if no date is selected
+            if (!selectedOperationalDate && availableDates.length > 0) {
+                selectedOperationalDate = availableDates[availableDates.length - 1];
+                $('#operationalDatePicker').datepicker('setDate', selectedOperationalDate);
+            } else if (selectedOperationalDate && !availableDates.includes(selectedOperationalDate)) {
+                // If the previously selected date is no longer available (e.g., due to filters), reset
+                selectedOperationalDate = availableDates.length > 0 ? availableDates[availableDates.length - 1] : '';
+                $('#operationalDatePicker').datepicker('setDate', selectedOperationalDate);
+            } else if (!selectedOperationalDate && availableDates.length === 0) {
+                 $('#operationalDatePicker').datepicker('setDate', null); // Clear date picker if no dates
+            }
+
+            // Re-enable date picker to apply new availableDates filter
+            console.log("Frontend: availableDates for Datepicker", availableDates); // Debug log
+            $('#operationalDatePicker').datepicker('option', 'beforeShowDay', function(date) {
+                const d = $.datepicker.formatDate('yy-mm-dd', date);
+                // console.log("Checking date for picker:", d, "Is available:", availableDates.includes(d)); // More granular debug
+                return [availableDates.includes(d)];
+            });
+
+            // Update all charts and components
+            updateKPIs(data);
+            updateHourChart(data, viewType);
+            updateTopOffensesSelect(data.available_top_offenses);
+            updateTodayYesterdayChart(data);
+            updateSectorChart(data);
+            updateDailyCrimeChart(data);
+            
+            // Update recent crimes table
+            recentCrimesData = data.recent_crimes;
+            updateRecentCrimesTable(recentCrimesData, currentPage, 
+                document.getElementById('recentCrimesSearch').value);
+        } catch (error) {
+            console.error('Error fetching operational data:', error);
+            // Show error to user
+            const errorAlert = document.createElement('div');
+            errorAlert.className = 'alert alert-danger alert-dismissible fade show';
+            errorAlert.innerHTML = `
+                <strong>Error!</strong> Failed to load dashboard data. Please try again.
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            document.querySelector('.container').insertBefore(errorAlert, document.querySelector('.row'));
+        }
+    };
+
     document.addEventListener('DOMContentLoaded', function() {
-        fetch('/api/operational-data')
-            .then(response => response.json())
-            .then(data => {
-                console.log('Operational Data:', data);
-                // KPI Cards
-                document.getElementById('kpiTotalCrimes').textContent = data.kpis.total_crimes_today;
-                document.getElementById('kpiActiveSectors').textContent = data.kpis.active_sectors;
-                document.getElementById('kpiMostReportedOffense').textContent = data.kpis.most_reported_offense_today || 'N/A';
+        // Initialize modal
+        crimeDetailsModal = new bootstrap.Modal(document.getElementById('crimeDetailsModal'));
 
-                // Chart: Crime count by hour of day
-                const crimeByHourCtx = document.getElementById('crimeByHourChart').getContext('2d');
-                new Chart(crimeByHourCtx, {
-                    type: 'line',
-                    data: {
-                        labels: data.crime_by_hour_chart.labels,
-                        datasets: [{
-                            label: 'Crime Count',
-                            data: data.crime_by_hour_chart.values,
-                            borderColor: 'rgba(75, 192, 192, 1)',
-                            fill: false
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        scales: {
-                            y: {
-                                beginAtZero: true
-                            },
-                            x: {
-                                title: {
-                                    display: true,
-                                    text: 'Hour of Day'
-                                }
-                            }
-                        }
-                    }
-                });
+        // Add Select2 Bootstrap 5 theme
+        const style = document.createElement('style');
+        style.textContent = `
+            .select2-container--bootstrap-5 .select2-selection {
+                min-height: 38px;
+                padding: 0.25rem 0.75rem;
+                font-size: 0.875rem;
+                border-radius: 0.375rem;
+                border: 1px solid #dee2e6;
+                background-color: white; /* Ensure white background for the input area */
+            }
+            .select2-container--bootstrap-5 .select2-selection--multiple .select2-selection__rendered {
+                padding: 0;
+                margin: 0.125rem;
+                min-height: 38px !important; /* Stronger enforcement of min-height */
+                height: auto !important; /* Force height to auto */
+                display: flex !important; /* Use flexbox to control item layout */
+                flex-wrap: wrap; /* Allow selected items to wrap */
+                align-items: center; /* Vertically align content */
+            }
+            .select2-container--bootstrap-5 .select2-selection--multiple .select2-selection__choice {
+                margin: 0.125rem;
+                padding: 0.25rem 0.75rem; /* Adjusted to match btn-sm padding */
+                background-color: white; /* White background for the tag */
+                border: 1px solid #dee2e6; /* Subtle border */
+                border-radius: 0.25rem;
+                font-size: 0.875rem; /* Match btn-sm font size */
+                color: #212529; /* Dark text color */
+                height: auto !important; /* Ensure height adjusts to content */
+                line-height: 1; /* Tighter line height */
+                display: flex; /* Use flexbox for precise internal alignment */
+                align-items: center; /* Vertically align content within tag */
+            }
+            .select2-container--bootstrap-5 .select2-selection--multiple .select2-selection__choice__remove {
+                margin-left: 0.35rem; 
+                font-size: 0 !important; /* Force font size to 0 to hide default text */
+                color: #212529; /* Darker color for the icon */
+                cursor: pointer;
+                display: inline-block !important; /* Use inline-block for better control over dimensions */
+                vertical-align: middle; /* Align vertically in line */
+                line-height: 1; /* Keep line height tight */
+                width: 1.2em !important; /* Force width for the container */
+                height: 1.2em !important; /* Force height for the container */
+                position: relative; /* Establish positioning context for pseudo-element */
+                padding: 0 !important; /* Force padding to 0 to remove any inherited padding */
+                text-indent: -9999px !important; /* Hide original text */
+                overflow: hidden !important; /* Hide original text overflow */
+            }
+            .select2-container--bootstrap-5 .select2-selection--multiple .select2-selection__choice__remove::before {
+                content: "\f628"; /* Unicode for bi-x-lg */
+                font-family: "Bootstrap Icons" !important; /* Specify Bootstrap Icons font */
+                font-size: 0.875rem !important; /* Set explicit font size for the icon */
+                color: inherit !important; /* Inherit color from parent for consistency */
+                position: absolute; /* Position the icon */
+                top: 50%; /* Center vertically */
+                left: 50%; /* Center horizontally */
+                transform: translate(-50%, -50%); /* Adjust for exact centering */
+                font-style: normal !important; /* Ensure normal font style for icon */
+                font-weight: normal !important; /* Ensure normal font weight for icon */
+                text-decoration: none !important; /* Remove any text decoration */
+                -webkit-font-smoothing: antialiased; /* For better icon rendering on WebKit */
+                -moz-osx-font-smoothing: grayscale; /* For better icon rendering on Firefox */
+                text-indent: 0 !important; /* Reset text-indent for the pseudo-element itself */
+            }
+            .chart-container {
+                position: relative;
+                height: 300px;
+                width: 100%;
+            }
+        `;
+        document.head.appendChild(style);
 
-                // Grouped Bar Chart: Crime by category today vs yesterday
-                const crimeTodayYesterdayCtx = document.getElementById('crimeTodayYesterdayChart').getContext('2d');
-                new Chart(crimeTodayYesterdayCtx, {
-                    type: 'bar',
-                    data: {
-                        labels: data.crime_today_yesterday_chart.labels,
-                        datasets: [
-                            {
-                                label: 'Today',
-                                data: data.crime_today_yesterday_chart.today_values,
-                                backgroundColor: 'rgba(255, 99, 132, 0.6)'
-                            },
-                            {
-                                label: 'Yesterday',
-                                data: data.crime_today_yesterday_chart.yesterday_values,
-                                backgroundColor: 'rgba(54, 162, 235, 0.6)'
-                            }
-                        ]
-                    },
-                    options: {
-                        responsive: true,
-                        scales: {
-                            y: {
-                                beginAtZero: true
-                            }
-                        }
-                    }
-                });
+        // Add event listeners for search
+        const searchInput = document.getElementById('recentCrimesSearch');
+        let searchTimeout;
+        searchInput.addEventListener('input', (e) => {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                updateRecentCrimesTable(recentCrimesData, 1, e.target.value);
+            }, 300);
+        });
 
-                // Chart: Crimes by sector
-                const crimeBySectorCtx = document.getElementById('crimeBySectorChart').getContext('2d');
-                new Chart(crimeBySectorCtx, {
-                    type: 'bar',
-                    data: {
-                        labels: data.crime_by_sector_chart.labels,
-                        datasets: [{
-                            label: 'Crime Count',
-                            data: data.crime_by_sector_chart.values,
-                            backgroundColor: 'rgba(153, 102, 255, 0.6)'
-                        }]
-                    },
-                    options: {
-                        indexAxis: 'y',
-                        responsive: true,
-                        scales: {
-                            x: {
-                                beginAtZero: true
-                            }
-                        }
-                    }
-                });
+        document.getElementById('clearSearch').addEventListener('click', () => {
+            searchInput.value = '';
+            updateRecentCrimesTable(recentCrimesData, 1, '');
+        });
 
-                // Stacked Area Chart: Daily crime totals over last 7 days
-                const dailyCrimeCtx = document.getElementById('dailyCrimeChart').getContext('2d');
-                new Chart(dailyCrimeCtx, {
-                    type: 'line',
-                    data: {
-                        labels: data.daily_crime_chart.labels,
-                        datasets: [{
-                            label: 'Daily Crime Total',
-                            data: data.daily_crime_chart.values,
-                            borderColor: 'rgba(255, 159, 64, 1)',
-                            backgroundColor: 'rgba(255, 159, 64, 0.2)',
-                            fill: true
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        scales: {
-                            y: {
-                                beginAtZero: true,
-                                stacked: true
-                            },
-                            x: {
-                                stacked: true
-                            }
-                        }
-                    }
-                });
+        // Add event listeners for hour chart view toggle
+        document.querySelectorAll('[data-view]').forEach(button => {
+            button.addEventListener('click', (e) => {
+                document.querySelectorAll('[data-view]').forEach(btn => btn.classList.remove('active'));
+                e.target.classList.add('active');
+                currentViewType = e.target.dataset.view;
+                fetchOperationalData(currentViewType);
+            });
+        });
 
-                // Live Table: Last 50 reported crimes
-                const recentCrimesTableBody = document.getElementById('recentCrimesTableBody');
-                data.recent_crimes.forEach(crime => {
-                    const row = recentCrimesTableBody.insertRow();
-                    row.insertCell().textContent = crime.Report_Number;
-                    row.insertCell().textContent = crime.Report_DateTime;
-                    row.insertCell().textContent = crime.Offense_Category;
-                    row.insertCell().textContent = crime.Precinct;
-                    row.insertCell().textContent = crime.Neighborhood;
-                });
-            })
-            .catch(error => console.error('Error fetching operational data:', error));
+        // Initialize jQuery UI Datepicker
+        $('#operationalDatePicker').datepicker({
+            dateFormat: 'yy-mm-dd',
+            beforeShowDay: function(date) {
+                const d = $.datepicker.formatDate('yy-mm-dd', date);
+                return [availableDates.includes(d)]; // Enable only available dates
+            },
+            onSelect: function(dateText) {
+                selectedOperationalDate = dateText;
+                fetchOperationalData(); // Fetch data for the selected date
+            }
+        });
+
+        // Initial data fetch
+        fetchOperationalData();
     });
 </script>
 {% endblock %} 

@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="p-5 mb-4 bg-light rounded-3">
+    <div class="container-fluid py-5">
+        <h1 class="display-5 fw-bold">Welcome to the KEMV Crime Dashboard</h1>
+        <p class="col-md-8 fs-4">This dashboard provides comprehensive insights into crime data, offering strategic, operational, and analytical views to help understand patterns and trends. Explore the different sections to gain a deeper understanding of crime statistics.</p>
+        <a href="/strategic-dashboard" class="btn btn-primary btn-lg" type="button">Explore Strategic View</a>
+        <a href="/operational-dashboard" class="btn btn-secondary btn-lg ms-2" type="button">Explore Operational View</a>
+        <a href="/analytical-dashboard" class="btn btn-info btn-lg ms-2" type="button">Explore Analytical View</a>
+    </div>
+</div>
+{% endblock %} 
